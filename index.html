@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Compteur Buvette</title>
+    <title>Compteur Buvette Pro</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; text-align: center; background: #1a1a1a; color: white; padding: 20px; }
-        .card { background: #2a2a2a; padding: 20px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .card { background: #2a2a2a; padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         
         .boisson-row { 
             display: flex; 
@@ -14,54 +14,59 @@
             justify-content: space-between; 
             background: #333; 
             margin: 10px 0; 
-            padding: 10px; 
+            padding: 12px; 
             border-radius: 12px;
         }
         
-        .nom-boisson { font-size: 1.2rem; flex-grow: 1; text-align: left; margin-left: 10px; }
+        .nom-boisson { font-size: 1.1rem; flex-grow: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; }
+        .controls { display: flex; align-items: center; gap: 12px; }
         
-        .controls { display: flex; align-items: center; gap: 15px; }
+        button { border: none; border-radius: 50%; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; transition: 0.1s; }
+        button:active { transform: scale(0.9); opacity: 0.8; }
         
-        button { 
-            width: 45px; 
-            height: 45px; 
-            font-size: 1.5rem; 
-            border: none; 
-            border-radius: 50%; 
-            cursor: pointer; 
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .btn-plus { width: 45px; height: 45px; font-size: 1.5rem; background: #2ecc71; }
+        .btn-moins { width: 40px; height: 40px; font-size: 1.2rem; background: #e74c3c; }
+        .compteur { font-size: 1.4rem; font-weight: bold; min-width: 35px; }
+        
+        .btn-ajouter { 
+            background: #3498db; 
+            border-radius: 10px; 
+            width: 100%; 
+            height: 50px; 
+            font-size: 1rem; 
+            margin-bottom: 20px;
         }
-        
-        .btn-plus { background: #2ecc71; }
-        .btn-moins { background: #e74c3c; }
-        .compteur { font-size: 1.5rem; font-weight: bold; min-width: 30px; }
-        
-        .reset { background: none; color: #888; text-decoration: underline; font-size: 0.9rem; margin-top: 30px; border: none; cursor: pointer; }
+
+        .reset-zone { margin-top: 40px; border-top: 1px solid #444; padding-top: 20px; }
+        .btn-action { background: none; color: #888; text-decoration: underline; font-size: 0.8rem; border: none; cursor: pointer; margin: 0 10px; }
     </style>
 </head>
 <body>
 
-    <h2>📊 Compteur de Boissons</h2>
+    <h2>📊 Ma Buvette Mobile</h2>
     
+    <button class="btn-ajouter" onclick="demanderNouvelleBoisson()">➕ Ajouter une boisson / un produit</button>
+
     <div class="card" id="menu">
         </div>
 
-    <button class="reset" onclick="toutEffacer()">Réinitialiser tous les compteurs</button>
+    <div class="reset-zone">
+        <button class="btn-action" onclick="resetCompteurs()">Vider les compteurs</button>
+        <button class="btn-action" onclick="toutEffacer()">Supprimer toutes les boissons</button>
+    </div>
 
     <script>
-        // Liste de tes boissons (tu peux en ajouter ou en enlever ici !)
-        const nomsBoissons = ["🍺 Bière", "🥤 Soda", "🍷 Vin", "💧 Eau"];
-
-        // Chargement des données sauvegardées
-        let counts = JSON.parse(localStorage.getItem('buvetteSimpli')) || {};
+        // On récupère la liste des boissons ET les scores
+        // Si c'est vide, on met des boissons par défaut
+        let localData = JSON.parse(localStorage.getItem('buvetteConfig')) || {
+            noms: ["🍺 Bière", "🥤 Soda", "🍷 Vin"],
+            scores: {}
+        };
 
         function genererInterface() {
             let html = "";
-            nomsBoissons.forEach(nom => {
-                let quantite = counts[nom] || 0;
+            localData.noms.forEach(nom => {
+                let quantite = localData.scores[nom] || 0;
                 html += `
                     <div class="boisson-row">
                         <span class="nom-boisson">${nom}</span>
@@ -73,36 +78,50 @@
                     </div>
                 `;
             });
-            document.getElementById('menu').innerHTML = html;
+            document.getElementById('menu').innerHTML = html || "<p style='color:#666'>Aucune boisson. Ajoutez-en une !</p>";
         }
 
-        function modifier(nom, valeur) {
-            if (!counts[nom]) counts[nom] = 0;
-            
-            counts[nom] += valeur;
-            
-            // On empêche d'avoir un score négatif
-            if (counts[nom] < 0) counts[nom] = 0;
-            
-            sauvegarder();
-        }
-
-        function sauvegarder() {
-            localStorage.setItem('buvetteSimpli', JSON.stringify(counts));
-            // Mise à jour visuelle sans recharger toute l'interface
-            nomsBoissons.forEach(nom => {
-                document.getElementById(`count-${nom}`).innerText = counts[nom] || 0;
-            });
-        }
-
-        function toutEffacer() {
-            if(confirm("Voulez-vous remettre tous les compteurs à zéro ?")) {
-                counts = {};
-                sauvegarder();
+        function demanderNouvelleBoisson() {
+            let nouvelle = prompt("Nom de la boisson (ex: Pastis, Jus d'orange...) :");
+            if (nouvelle && nouvelle.trim() !== "") {
+                if (!localData.noms.includes(nouvelle)) {
+                    localData.noms.push(nouvelle);
+                    sauvegarder();
+                    genererInterface(); // On reconstruit pour afficher la nouvelle ligne
+                }
             }
         }
 
-        // Lancement au démarrage
+        function modifier(nom, valeur) {
+            if (!localData.scores[nom]) localData.scores[nom] = 0;
+            localData.scores[nom] += valeur;
+            if (localData.scores[nom] < 0) localData.scores[nom] = 0;
+            
+            sauvegarder();
+            document.getElementById(`count-${nom}`).innerText = localData.scores[nom];
+        }
+
+        function sauvegarder() {
+            localStorage.setItem('buvetteConfig', JSON.stringify(localData));
+        }
+
+        function resetCompteurs() {
+            if(confirm("Remettre tous les compteurs à zéro ?")) {
+                localData.scores = {};
+                sauvegarder();
+                genererInterface();
+            }
+        }
+
+        function toutEffacer() {
+            if(confirm("Supprimer toutes les boissons et recommencer à zéro ?")) {
+                localData = { noms: [], scores: {} };
+                sauvegarder();
+                genererInterface();
+            }
+        }
+
+        // Lancement
         genererInterface();
     </script>
 </body>
