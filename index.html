@@ -7,69 +7,62 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Buvette">
-    
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/931/931949.png">
 
-    <title>Buvette Master</title>
+    <title>Buvette Master Pro</title>
     <style>
-        /* Adaptations pour le plein écran iPhone */
-        :root {
-            --safe-top: env(safe-area-inset-top);
-        }
+        :root { --safe-top: env(safe-area-inset-top); }
 
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
-            background: #121212; 
-            color: white; 
-            padding: 10px; 
-            padding-top: calc(var(--safe-top) + 20px); /* Évite l'encoche de l'iPhone */
-            margin: 0; 
-            padding-bottom: 100px; 
+            font-family: -apple-system, system-ui, sans-serif; 
+            background: #121212; color: white; padding: 10px; 
+            padding-top: calc(var(--safe-top) + 10px);
+            margin: 0; padding-bottom: 100px; 
         }
 
-        h2 { text-align: center; color: #f39c12; margin-bottom: 20px; }
+        h2 { text-align: center; color: #f39c12; margin-bottom: 15px; font-size: 1.4rem; }
         
-        .boisson-wrapper { position: relative; margin-bottom: 12px; background: #c0392b; border-radius: 16px; overflow: hidden; }
+        /* Conteneur plus compact */
+        .boisson-wrapper { position: relative; margin-bottom: 8px; background: #c0392b; border-radius: 12px; overflow: hidden; }
         .favori-bg { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: #f1c40f; display: flex; align-items: center; padding-left: 20px; color: black; font-weight: bold; z-index: 1; }
         
         .boisson-row { 
-            position: relative; display: flex; align-items: center; background: #2a2a2a; padding: 15px; 
+            position: relative; display: flex; align-items: center; background: #2a2a2a; 
+            padding: 8px 10px; /* Réduit de 15px à 8px */
             transition: transform 0.2s; z-index: 2; touch-action: pan-y;
         }
 
-        .reorder-btns { display: flex; flex-direction: column; gap: 5px; margin-right: 15px; }
-        .btn-move { background: #3d3d3d; color: white; border: none; border-radius: 6px; height: 28px; width: 38px; font-weight: bold; font-size: 1rem; }
+        .reorder-btns { display: flex; flex-direction: column; gap: 3px; margin-right: 12px; }
+        .btn-move { background: #3d3d3d; color: white; border: none; border-radius: 4px; height: 22px; width: 32px; font-size: 0.9rem; }
 
         .info { flex-grow: 1; min-width: 0; }
-        .nom { font-size: 1.15rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .nom { font-size: 1rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         
-        .controls { display: flex; align-items: center; gap: 12px; }
-        .btn-calc { border: none; border-radius: 50%; color: white; font-weight: bold; width: 50px; height: 50px; font-size: 1.6rem; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        .controls { display: flex; align-items: center; gap: 10px; }
+        .btn-calc { border: none; border-radius: 50%; color: white; font-weight: bold; width: 42px; height: 42px; font-size: 1.4rem; }
         .btn-plus { background: #2ecc71; }
         .btn-moins { background: #e74c3c; }
-        .compteur { font-size: 1.6rem; min-width: 35px; text-align: center; font-weight: bold; font-variant-numeric: tabular-nums; }
+        .compteur { font-size: 1.4rem; min-width: 30px; text-align: center; font-weight: bold; }
 
         .fab {
-            position: fixed; bottom: 30px; right: 25px;
-            width: 65px; height: 65px; background: #3498db;
+            position: fixed; bottom: 25px; right: 20px;
+            width: 55px; height: 55px; background: #3498db;
             border-radius: 50%; border: none; color: white;
-            font-size: 2.2rem; z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.6);
-            display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
 
-        .reset-link { display: block; width: 100%; margin-top: 50px; background: none; border: none; color: #555; text-decoration: underline; font-size: 0.9rem; }
+        .reset-link { display: block; width: 100%; margin-top: 40px; background: none; border: none; color: #444; text-decoration: underline; font-size: 0.8rem; }
     </style>
 </head>
 <body>
 
     <h2>📊 MA BUVETTE</h2>
     <div id="menu"></div>
-    
     <button class="fab" onclick="ajouterBoisson()">+</button>
     <button class="reset-link" onclick="resetCounts()">Réinitialiser les compteurs</button>
 
     <script>
-        // Utilisation d'une clé de stockage stable
+        // LA LIGNE MAGIQUE (INCHANGÉE)
         let data = JSON.parse(localStorage.getItem('buvette_final_v5')) || {
             boissons: [
                 { id: 1, nom: "🍺 Bière", count: 0, fav: false },
@@ -107,16 +100,35 @@
         }
 
         function setupSwipe(el, id) {
-            let startX = 0, currentX = 0;
-            el.addEventListener('touchstart', e => { startX = e.touches[0].clientX; el.style.transition = 'none'; }, {passive: true});
-            el.addEventListener('touchmove', e => {
-                currentX = e.touches[0].clientX - startX;
-                if (Math.abs(currentX) > 10) el.style.transform = `translateX(${currentX}px)`;
+            let startX = 0, startY = 0, currentX = 0, isScrolling = false;
+            
+            el.addEventListener('touchstart', e => { 
+                startX = e.touches[0].clientX; 
+                startY = e.touches[0].clientY;
+                isScrolling = false;
+                el.style.transition = 'none'; 
             }, {passive: true});
+
+            el.addEventListener('touchmove', e => {
+                let diffX = e.touches[0].clientX - startX;
+                let diffY = e.touches[0].clientY - startY;
+
+                // Si on bouge plus verticalement qu'horizontalement, on bloque le swipe
+                if (!isScrolling && Math.abs(diffY) > Math.abs(diffX)) {
+                    isScrolling = true;
+                }
+
+                if (!isScrolling) {
+                    currentX = diffX;
+                    el.style.transform = `translateX(${currentX}px)`;
+                }
+            }, {passive: true});
+
             el.addEventListener('touchend', () => {
-                el.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-                if (currentX > 140) toggleFav(id);
-                else if (currentX < -140) suppr(id);
+                el.style.transition = 'transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.1)';
+                // Seuil de déclenchement augmenté à 150px pour moins de sensibilité
+                if (currentX > 150) toggleFav(id);
+                else if (currentX < -150) suppr(id);
                 el.style.transform = '';
                 currentX = 0;
             });
@@ -161,7 +173,7 @@
         }
 
         function save() { localStorage.setItem('buvette_final_v5', JSON.stringify(data)); }
-        function resetCounts() { if(confirm("Vider la caisse ?")) { data.boissons.forEach(b => b.count = 0); save(); render(); }}
+        function resetCounts() { if(confirm("Vider les compteurs ?")) { data.boissons.forEach(b => b.count = 0); save(); render(); }}
 
         render();
     </script>
