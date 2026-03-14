@@ -2,139 +2,209 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buvette Master</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Buvette Swipe Master</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; text-align: center; background: #1a1a1a; color: white; padding: 15px; margin: 0; }
-        h2 { margin-top: 10px; color: #f39c12; }
-        .card { background: #2a2a2a; padding: 10px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; padding: 10px; margin: 0; touch-action: pan-y; }
+        h2 { text-align: center; color: #f39c12; }
+        
+        .container { position: relative; overflow: hidden; }
+        
+        /* Style de la ligne de boisson */
+        .boisson-wrapper { position: relative; margin-bottom: 10px; background: #c0392b; border-radius: 12px; overflow: hidden; }
+        
+        .favori-bg { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: #f1c40f; display: flex; align-items: center; padding-left: 20px; color: black; font-weight: bold; z-index: 1; }
         
         .boisson-row { 
+            position: relative;
             display: flex; 
-            flex-direction: column;
-            background: #333; 
-            margin: 10px 0; 
-            padding: 12px; 
-            border-radius: 12px;
-            border-left: 5px solid #3498db;
+            align-items: center; 
+            background: #2a2a2a; 
+            padding: 15px 10px; 
+            transition: transform 0.2s ease-out;
+            z-index: 2;
+            touch-action: none; /* Nécessaire pour le drag manuel */
         }
-        
-        .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .nom-boisson { font-size: 1.2rem; font-weight: bold; flex-grow: 1; text-align: left; }
-        
-        .action-btns { display: flex; gap: 5px; }
-        .btn-small { background: #444; color: white; border: none; border-radius: 5px; padding: 5px 8px; font-size: 0.8rem; }
-        .btn-del { background: #c0392b; }
 
-        .controls-row { display: flex; justify-content: space-between; align-items: center; background: #222; padding: 8px; border-radius: 8px; }
+        .handle { cursor: grab; padding: 10px; color: #555; font-size: 1.5rem; }
         
-        button { border: none; border-radius: 50%; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; }
-        button:active { transform: scale(0.9); }
+        .info { flex-grow: 1; margin-left: 5px; }
+        .nom { font-size: 1.1rem; font-weight: bold; display: flex; align-items: center; }
+        .fav-star { color: #f1c40f; margin-left: 5px; }
+
+        .controls { display: flex; align-items: center; gap: 15px; }
+        button { border: none; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
         
-        .btn-plus { width: 50px; height: 50px; font-size: 1.8rem; background: #2ecc71; }
-        .btn-moins { width: 45px; height: 45px; font-size: 1.5rem; background: #e74c3c; }
-        .compteur { font-size: 1.8rem; font-weight: bold; min-width: 40px; }
-        
-        .btn-ajouter { background: #3498db; border-radius: 10px; width: 100%; height: 55px; font-size: 1.1rem; margin-bottom: 15px; font-weight: bold; }
-        .reset-zone { margin-top: 30px; padding-bottom: 30px; }
-        .btn-action { background: none; color: #666; text-decoration: underline; font-size: 0.8rem; border: none; cursor: pointer; margin: 10px; }
+        .btn-plus { width: 45px; height: 45px; font-size: 1.5rem; background: #2ecc71; }
+        .btn-moins { width: 40px; height: 40px; font-size: 1.2rem; background: #e74c3c; }
+        .compteur { font-size: 1.5rem; min-width: 30px; text-align: center; }
+
+        .btn-ajouter { background: #3498db; border: none; border-radius: 10px; width: 100%; height: 50px; color: white; font-size: 1rem; margin-bottom: 15px; }
+        .reset-btn { background: none; color: #555; border: none; text-decoration: underline; width: 100%; margin-top: 20px; }
+
+        /* Style quand on déplace (Y) */
+        .dragging { opacity: 0.5; background: #3498db !important; }
     </style>
 </head>
 <body>
 
-    <h2>📊 Buvette Master</h2>
+    <h2>📊 Buvette Tactile</h2>
     
-    <button class="btn-ajouter" onclick="demanderNouvelleBoisson()">➕ Ajouter une boisson</button>
+    <button class="btn-ajouter" onclick="ajouterBoisson()">➕ Ajouter une boisson</button>
 
-    <div id="menu">
-        </div>
+    <div id="menu" class="container"></div>
 
-    <div class="reset-zone">
-        <button class="btn-action" onclick="resetCompteurs()">Remettre les compteurs à zéro</button>
-    </div>
+    <button class="reset-btn" onclick="resetCounts()">Réinitialiser les compteurs</button>
 
     <script>
-        let localData = JSON.parse(localStorage.getItem('buvetteV3')) || {
-            noms: ["🍺 Bière", "🥤 Soda", "🍷 Vin"],
-            scores: {}
+        let data = JSON.parse(localStorage.getItem('buvetteSwipe')) || {
+            boissons: [
+                { id: 1, nom: "🍺 Bière", count: 0, fav: false },
+                { id: 2, nom: "🥤 Soda", count: 0, fav: false },
+                { id: 3, nom: "🍷 Vin", count: 0, fav: false }
+            ]
         };
 
-        function genererInterface() {
-            let html = "";
-            localData.noms.forEach((nom, index) => {
-                let quantite = localData.scores[nom] || 0;
-                html += `
-                    <div class="boisson-row">
-                        <div class="top-row">
-                            <span class="nom-boisson">${nom}</span>
-                            <div class="action-btns">
-                                <button class="btn-small" onclick="deplacer(${index}, -1)">↑</button>
-                                <button class="btn-small" onclick="deplacer(${index}, 1)">↓</button>
-                                <button class="btn-small btn-del" onclick="supprimer('${nom}')">✕</button>
-                            </div>
+        const menuEl = document.getElementById('menu');
+
+        function render() {
+            menuEl.innerHTML = '';
+            // On trie : les favoris en haut
+            const sorted = [...data.boissons].sort((a, b) => b.fav - a.fav);
+
+            sorted.forEach((b, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'boisson-wrapper';
+                
+                wrapper.innerHTML = `
+                    <div class="favori-bg">★ Favori</div>
+                    <div class="boisson-row" data-id="${b.id}" draggable="true">
+                        <div class="handle">⠿</div>
+                        <div class="info">
+                            <div class="nom">${b.nom} ${b.fav ? '<span class="fav-star">★</span>' : ''}</div>
                         </div>
-                        <div class="controls-row">
-                            <button class="btn-moins" onclick="modifier('${nom}', -1)">-</button>
-                            <span class="compteur" id="count-${nom}">${quantite}</span>
-                            <button class="btn-plus" onclick="modifier('${nom}', 1)">+</button>
+                        <div class="controls">
+                            <button class="btn-moins" onclick="event.stopPropagation(); mod(${b.id}, -1)">-</button>
+                            <span class="compteur">${b.count}</span>
+                            <button class="btn-plus" onclick="event.stopPropagation(); mod(${b.id}, 1)">+</button>
                         </div>
                     </div>
                 `;
+
+                const row = wrapper.querySelector('.boisson-row');
+                setupSwipe(row, b.id);
+                setupDragY(row, b.id);
+                
+                menuEl.appendChild(wrapper);
             });
-            document.getElementById('menu').innerHTML = html || "<p>Liste vide</p>";
         }
 
-        function demanderNouvelleBoisson() {
-            let n = prompt("Nom de la boisson :");
-            if (n && n.trim() !== "") {
-                if (!localData.noms.includes(n)) {
-                    localData.noms.push(n);
-                    sauvegarder();
-                    genererInterface();
+        // --- GESTION DU SWIPE (AXE X) ---
+        function setupSwipe(el, id) {
+            let startX = 0;
+            let currentX = 0;
+
+            el.addEventListener('touchstart', e => {
+                startX = e.touches[0].clientX;
+            }, {passive: true});
+
+            el.addEventListener('touchmove', e => {
+                currentX = e.touches[0].clientX - startX;
+                if (currentX > 0) { // Vers la droite (Favori)
+                    el.style.transform = `translateX(${currentX}px)`;
+                } else { // Vers la gauche (Supprimer)
+                    el.style.transform = `translateX(${currentX}px)`;
                 }
+            }, {passive: true});
+
+            el.addEventListener('touchend', e => {
+                el.style.transition = 'transform 0.3s ease';
+                if (currentX > 150) { // Seuil Favori
+                    toggleFav(id);
+                } else if (currentX < -150) { // Seuil Supprimer
+                    suppr(id);
+                }
+                el.style.transform = '';
+                setTimeout(() => el.style.transition = '', 300);
+                currentX = 0;
+            });
+        }
+
+        // --- GESTION DU DÉPLACEMENT (AXE Y) ---
+        function setupDragY(el, id) {
+            el.addEventListener('dragstart', () => el.classList.add('dragging'));
+            el.addEventListener('dragend', () => {
+                el.classList.remove('dragging');
+                saveOrder();
+            });
+        }
+
+        menuEl.addEventListener('dragover', e => {
+            e.preventDefault();
+            const draggingItem = document.querySelector('.dragging');
+            const afterElement = getDragAfterElement(menuEl, e.clientY);
+            if (afterElement == null) {
+                menuEl.appendChild(draggingItem.parentElement);
+            } else {
+                menuEl.insertBefore(draggingItem.parentElement, afterElement.parentElement);
+            }
+        });
+
+        function getDragAfterElement(container, y) {
+            const elements = [...container.querySelectorAll('.boisson-row:not(.dragging)')];
+            return elements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        // --- ACTIONS ---
+        function mod(id, val) {
+            const b = data.boissons.find(x => x.id === id);
+            b.count = Math.max(0, b.count + val);
+            save(); render();
+        }
+
+        function toggleFav(id) {
+            const b = data.boissons.find(x => x.id === id);
+            b.fav = !b.fav;
+            save(); render();
+        }
+
+        function suppr(id) {
+            if(confirm("Supprimer cette boisson ?")) {
+                data.boissons = data.boissons.filter(x => x.id !== id);
+                save(); render();
             }
         }
 
-        function modifier(nom, val) {
-            localData.scores[nom] = (localData.scores[nom] || 0) + val;
-            if (localData.scores[nom] < 0) localData.scores[nom] = 0;
-            sauvegarder();
-            document.getElementById(`count-${nom}`).innerText = localData.scores[nom];
-        }
-
-        function deplacer(index, direction) {
-            let nouvelIndex = index + direction;
-            if (nouvelIndex >= 0 && nouvelIndex < localData.noms.length) {
-                let temp = localData.noms[index];
-                localData.noms[index] = localData.noms[nouvelIndex];
-                localData.noms[nouvelIndex] = temp;
-                sauvegarder();
-                genererInterface();
+        function ajouterBoisson() {
+            const n = prompt("Nom de la boisson :");
+            if(n) {
+                data.boissons.push({ id: Date.now(), nom: n, count: 0, fav: false });
+                save(); render();
             }
         }
 
-        function supprimer(nom) {
-            if (confirm(`Supprimer définitivement "${nom}" ?`)) {
-                localData.noms = localData.noms.filter(n => n !== nom);
-                delete localData.scores[nom];
-                sauvegarder();
-                genererInterface();
-            }
+        function saveOrder() {
+            const rows = [...document.querySelectorAll('.boisson-row')];
+            const newOrder = rows.map(row => {
+                const id = parseInt(row.getAttribute('data-id'));
+                return data.boissons.find(x => x.id === id);
+            });
+            data.boissons = newOrder;
+            save();
         }
 
-        function sauvegarder() {
-            localStorage.setItem('buvetteV3', JSON.stringify(localData));
-        }
+        function save() { localStorage.setItem('buvetteSwipe', JSON.stringify(data)); }
+        function resetCounts() { if(confirm("Reset ?")) { data.boissons.forEach(x => x.count = 0); save(); render(); }}
 
-        function resetCompteurs() {
-            if (confirm("Remettre tous les compteurs à 0 ?")) {
-                localData.scores = {};
-                sauvegarder();
-                genererInterface();
-            }
-        }
-
-        genererInterface();
+        render();
     </script>
 </body>
 </html>
