@@ -3,67 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buvette Express</title>
+    <title>Compteur Buvette</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; text-align: center; background: #1a1a1a; color: white; padding: 20px; }
-        .card { background: #2a2a2a; padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        button { width: 100%; padding: 15px; margin: 8px 0; font-size: 1.2rem; border: none; border-radius: 10px; cursor: pointer; transition: 0.2s; color: white; }
-        .btn-biere { background: #f39c12; }
-        .btn-soda { background: #3498db; }
-        .btn-vin { background: #e74c3c; }
-        .total-box { font-size: 1.5rem; color: #2ecc71; font-weight: bold; border-top: 1px solid #444; padding-top: 10px; }
-        .stats p { display: flex; justify-content: space-between; padding: 0 20px; font-size: 1.1rem; }
-        .reset { background: none; color: #888; text-decoration: underline; font-size: 0.9rem; margin-top: 20px; }
+        .card { background: #2a2a2a; padding: 20px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        
+        .boisson-row { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            background: #333; 
+            margin: 10px 0; 
+            padding: 10px; 
+            border-radius: 12px;
+        }
+        
+        .nom-boisson { font-size: 1.2rem; flex-grow: 1; text-align: left; margin-left: 10px; }
+        
+        .controls { display: flex; align-items: center; gap: 15px; }
+        
+        button { 
+            width: 45px; 
+            height: 45px; 
+            font-size: 1.5rem; 
+            border: none; 
+            border-radius: 50%; 
+            cursor: pointer; 
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-plus { background: #2ecc71; }
+        .btn-moins { background: #e74c3c; }
+        .compteur { font-size: 1.5rem; font-weight: bold; min-width: 30px; }
+        
+        .reset { background: none; color: #888; text-decoration: underline; font-size: 0.9rem; margin-top: 30px; border: none; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <h2>🍻 Ma Buvette</h2>
+    <h2>📊 Compteur de Boissons</h2>
     
-    <div class="card">
-        <button class="btn-biere" onclick="ajouter('Bière', 3)">🍺 Bière (3€)</button>
-        <button class="btn-soda" onclick="ajouter('Soda', 2)">🥤 Soda (2€)</button>
-        <button class="btn-vin" onclick="ajouter('Vin', 4)">🍷 Vin (4€)</button>
-    </div>
+    <div class="card" id="menu">
+        </div>
 
-    <div class="card stats">
-        <h3>Ventes de la soirée</h3>
-        <div id="liste"></div>
-        <div class="total-box" id="total">Total : 0€</div>
-    </div>
-
-    <button class="reset" onclick="toutEffacer()">Réinitialiser la caisse</button>
+    <button class="reset" onclick="toutEffacer()">Réinitialiser tous les compteurs</button>
 
     <script>
-        let data = JSON.parse(localStorage.getItem('buvetteData')) || { counts: {}, total: 0 };
+        // Liste de tes boissons (tu peux en ajouter ou en enlever ici !)
+        const nomsBoissons = ["🍺 Bière", "🥤 Soda", "🍷 Vin", "💧 Eau"];
 
-        function ajouter(nom, prix) {
-            data.counts[nom] = (data.counts[nom] || 0) + 1;
-            data.total += prix;
+        // Chargement des données sauvegardées
+        let counts = JSON.parse(localStorage.getItem('buvetteSimpli')) || {};
+
+        function genererInterface() {
+            let html = "";
+            nomsBoissons.forEach(nom => {
+                let quantite = counts[nom] || 0;
+                html += `
+                    <div class="boisson-row">
+                        <span class="nom-boisson">${nom}</span>
+                        <div class="controls">
+                            <button class="btn-moins" onclick="modifier('${nom}', -1)">-</button>
+                            <span class="compteur" id="count-${nom}">${quantite}</span>
+                            <button class="btn-plus" onclick="modifier('${nom}', 1)">+</button>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('menu').innerHTML = html;
+        }
+
+        function modifier(nom, valeur) {
+            if (!counts[nom]) counts[nom] = 0;
+            
+            counts[nom] += valeur;
+            
+            // On empêche d'avoir un score négatif
+            if (counts[nom] < 0) counts[nom] = 0;
+            
             sauvegarder();
         }
 
         function sauvegarder() {
-            localStorage.setItem('buvetteData', JSON.stringify(data));
-            afficher();
-        }
-
-        function afficher() {
-            let html = "";
-            for (let article in data.counts) {
-                html += `<p><span>${article}</span> <span>x${data.counts[article]}</span></p>`;
-            }
-            document.getElementById('liste').innerHTML = html || "<p>Aucune vente</p>";
-            document.getElementById('total').innerText = `Total : ${data.total}€`;
+            localStorage.setItem('buvetteSimpli', JSON.stringify(counts));
+            // Mise à jour visuelle sans recharger toute l'interface
+            nomsBoissons.forEach(nom => {
+                document.getElementById(`count-${nom}`).innerText = counts[nom] || 0;
+            });
         }
 
         function toutEffacer() {
-            if(confirm("Effacer les données ?")) {
-                data = { counts: {}, total: 0 };
+            if(confirm("Voulez-vous remettre tous les compteurs à zéro ?")) {
+                counts = {};
                 sauvegarder();
             }
         }
-        afficher();
+
+        // Lancement au démarrage
+        genererInterface();
     </script>
 </body>
 </html>
